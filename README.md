@@ -1,6 +1,6 @@
 # 💰 SenteChain MiniApp
 
-> A Web3 mini-application built on **Base (Coinbase's Layer 2)** that allows Ugandans to send, receive, and save stablecoins (USDT) easily — no crypto knowledge required.
+> A Web3 mini-application to be built on **Stellar** that allows Ugandans to send, receive, and save stablecoins (USDT) easily — no crypto knowledge required.
 
 ![Base](https://img.shields.io/badge/Base-Sepolia-0052FF?style=for-the-badge&logo=coinbase)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
