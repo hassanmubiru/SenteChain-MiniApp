@@ -1,19 +1,19 @@
 # 💰 SenteChain MiniApp
 
-> A Web3 mini-application to be built on **Stellar** that allows Ugandans to send, receive, and save stablecoins (USDT) easily — no crypto knowledge required.
+> A Web3 mini-application built on **Stellar** that allows Ugandans to send, receive, and save stablecoins (USDT) easily — no crypto knowledge required.
 
-![Base](https://img.shields.io/badge/Base-Sepolia-0052FF?style=for-the-badge&logo=coinbase)
+![Stellar](https://img.shields.io/badge/Stellar-Testnet-7D00FF?style=for-the-badge&logo=stellar)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
-![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636?style=for-the-badge&logo=solidity)
+![Rust](https://img.shields.io/badge/Rust-Soroban-CE422B?style=for-the-badge&logo=rust)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ## 🎯 Overview
 
-SenteChain is a fully functional decentralized application (dApp) that simplifies crypto transactions for everyday users. Built on Base Sepolia testnet, it provides:
+SenteChain is a fully functional decentralized application (dApp) that simplifies crypto transactions for everyday users. Built on Stellar Testnet using Soroban smart contracts, it provides:
 
 - **Walletless Login**: Users register with email or phone number
 - **Auto-Generated Wallets**: Smart accounts created automatically
-- **Instant Transfers**: Send/receive USDT between users with zero fees
+- **Instant Transfers**: Send/receive USDT between users with low fees
 - **Savings Vault**: Lock tokens for savings with time-based unlocks
 - **Mobile-First UI**: Clean, intuitive interface built with TailwindCSS
 
@@ -22,11 +22,12 @@ SenteChain is a fully functional decentralized application (dApp) that simplifie
 ### Tech Stack
 
 - **Frontend**: Next.js 15 + React 19 + TailwindCSS
-- **Smart Contracts**: Solidity 0.8.20
-- **Blockchain**: Base Sepolia (Testnet)
-- **Web3 Library**: ethers.js v6
+- **Smart Contracts**: Rust (Soroban SDK)
+- **Blockchain**: Stellar Testnet
+- **Web3 Library**: @stellar/stellar-sdk
+- **Wallet**: Freighter
 - **Backend**: Node.js/Express
-- **Development**: Hardhat
+- **Development**: Soroban CLI + Cargo
 
 ### Project Structure
 
@@ -43,12 +44,11 @@ sentechain-miniapp/
 │   │   ├── SendForm.jsx        # Transfer form
 │   │   └── SavingsVault.jsx    # Savings management
 │   ├── utils/
-│   │   ├── contract.js         # Smart contract interactions
-│   │   └── connectWallet.js    # MetaMask connection
+│   │   ├── stellarContract.js  # Smart contract interactions
+│   │   ├── stellarConfig.js    # Stellar network config
+│   │   └── connectWallet.js    # Freighter connection
 │   ├── config/
 │   │   ├── contracts.json      # Deployed contract addresses
-│   │   ├── SenteTokenABI.json  # Token contract ABI
-│   │   └── SenteVaultABI.json  # Vault contract ABI
 │   └── styles/
 │       └── globals.css         # Global styles
 ├── backend/                     # Express API
@@ -58,11 +58,17 @@ sentechain-miniapp/
 │   ├── models/
 │   │   └── User.js            # User model
 │   └── db.js                  # Database connection
-├── smart_contracts/             # Solidity contracts
-│   ├── SenteToken.sol          # ERC20 token (sUSDT)
-│   ├── SenteVault.sol          # Vault management
-│   └── deploy.js               # Deployment script
-├── hardhat.config.js           # Hardhat configuration
+├── soroban_contracts/           # Rust Soroban contracts
+│   ├── sente_token/            # Token contract (sUSDT)
+│   │   ├── src/lib.rs         # Token implementation
+│   │   └── Cargo.toml         # Rust dependencies
+│   ├── sente_vault/            # Vault management
+│   │   ├── src/lib.rs         # Vault implementation
+│   │   └── Cargo.toml         # Rust dependencies
+│   └── Cargo.toml             # Workspace config
+├── stellar_deploy/              # Stellar deployment scripts
+│   ├── build-contracts.js      # Build Soroban contracts
+│   └── deploy.js              # Deploy to Stellar
 └── package.json                # Root dependencies
 ```
 
@@ -71,7 +77,9 @@ sentechain-miniapp/
 ### Prerequisites
 
 - Node.js 18+ and npm
-- MetaMask browser extension
+- **Rust and Cargo** ([Install here](https://rustup.rs/))
+- **Soroban CLI** (`cargo install --locked soroban-cli`)
+- **Freighter Wallet** ([Install here](https://freighter.app))
 - Git
 
 ### Installation
@@ -79,61 +87,52 @@ sentechain-miniapp/
 1. **Clone the repository**
 
 ```bash
-cd /home/godwin-ofwono/Desktop/EthNile/SenteChainMiniApp
+cd /home/godwin-ofwono/Desktop/BlockChain/SenteChain-MiniApp
 ```
 
-2. **Install root dependencies**
+2. **Install all dependencies**
 
 ```bash
-npm install
+npm run install:all
 ```
 
-3. **Install frontend dependencies**
-
-```bash
-cd frontend
-npm install
-cd ..
-```
-
-4. **Install backend dependencies**
-
-```bash
-cd backend
-npm install
-cd ..
-```
-
-5. **Set up environment variables**
+3. **Set up environment variables**
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add:
-- `PRIVATE_KEY`: Your wallet private key (for deployment)
-- `BASE_SEPOLIA_RPC`: https://sepolia.base.org
-- Other variables as needed
+Edit `.env` and configure for Stellar:
+```env
+STELLAR_NETWORK=testnet
+STELLAR_SECRET_KEY=S...  # Generate with: soroban keys generate deployer --network testnet
+```
 
 ### 🔧 Development Setup
 
-#### 1. Compile Smart Contracts
+#### 1. Build Soroban Smart Contracts
 
 ```bash
-npm run compile
+npm run build:soroban
 ```
 
-#### 2. Deploy to Base Sepolia
+This will:
+- Compile Rust contracts to WASM
+- Optimize WASM binaries
+- Output to `soroban_build/` directory
 
-Make sure you have Base Sepolia ETH in your wallet (get from [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-goerli-faucet)).
+#### 2. Deploy to Stellar Testnet
+
+Make sure your account is funded (automatically via Friendbot on testnet).
 
 ```bash
-npm run deploy
+npm run deploy:stellar
 ```
 
 This will:
 - Deploy `SenteToken` contract
 - Deploy `SenteVault` contract
+- Initialize both contracts
 - Save contract addresses to `frontend/config/contracts.json`
 
 #### 3. Start the Backend
@@ -166,27 +165,32 @@ npm run dev
 
 ## 📝 Smart Contracts
 
-### SenteToken (ERC20)
+### SenteToken (Soroban Token Contract)
 
-Mock USDT token with 6 decimals.
-
-**Key Functions:**
-- `faucet(uint256 amount)` - Get free testnet tokens (max 1000 sUSDT)
-- `approve(address spender, uint256 amount)` - Approve vault to spend tokens
-- `balanceOf(address account)` - Check token balance
-
-### SenteVault
-
-Manages user deposits, transfers, and savings.
+Custom token contract with 6 decimals (USDT standard).
 
 **Key Functions:**
-- `deposit(uint256 amount)` - Deposit tokens to vault
-- `withdraw(uint256 amount)` - Withdraw tokens from vault
-- `transfer(address to, uint256 amount)` - Transfer between users
-- `saveToVault(uint256 amount, uint256 lockDuration)` - Lock tokens for savings
-- `withdrawFromVault(uint256 amount)` - Unlock savings (after lock period)
-- `getBalance(address user)` - Get available balance
-- `getSavingsBalance(address user)` - Get locked savings balance
+- `initialize(admin, name, symbol, decimals, initial_supply)` - Initialize token
+- `transfer(from, to, amount)` - Transfer tokens
+- `approve(from, spender, amount)` - Approve spending
+- `claim_faucet(claimer)` - Get 100 free testnet tokens (once per day)
+- `balance(account)` - Check token balance
+- `can_claim_faucet(user)` - Check if eligible for faucet
+
+### SenteVault (Soroban Vault Contract)
+
+Manages user deposits, transfers, and time-locked savings.
+
+**Key Functions:**
+- `initialize(admin, token_contract)` - Initialize vault
+- `deposit(user, amount)` - Deposit tokens to vault
+- `withdraw(user, amount)` - Withdraw tokens from vault
+- `transfer(from, to, amount)` - Transfer between users in vault
+- `save_to_vault(user, amount, lock_duration_days)` - Lock tokens for savings
+- `withdraw_from_vault(user, amount)` - Unlock savings (after lock period)
+- `balance(user)` - Get available balance
+- `savings_balance(user)` - Get locked savings balance
+- `total_balance(user)` - Get total balance (available + savings)
 
 ## 🎮 Usage Guide
 
@@ -197,51 +201,67 @@ Manages user deposits, transfers, and savings.
    - Enter your email or phone number
    - Your wallet is automatically created!
 
-2. **Connect MetaMask**
+2. **Connect Freighter Wallet**
+   - Install Freighter from https://freighter.app
    - Click "Connect Wallet" on the dashboard
-   - Approve the connection in MetaMask
-   - Switch to Base Sepolia network (auto-prompt)
+   - Approve the connection in Freighter
+   - Account auto-funded on Stellar Testnet
 
 3. **Get Test Tokens**
    - Click "Claim 100 sUSDT" button
-   - Confirm transaction in MetaMask
-   - Wait for confirmation
+   - Confirm transaction in Freighter
+   - Wait for confirmation (5-10 seconds)
 
 4. **Deposit to Vault**
    - Click "Deposit to Vault"
    - Enter amount
-   - Approve tokens → Deposit
+   - Approve in Freighter → Deposit
 
 5. **Send Money**
-   - Enter recipient address
+   - Enter recipient Stellar address
    - Enter amount
    - Click "Send Now"
 
 6. **Save Money**
    - Go to "Savings Vault" tab
    - Select "Lock Savings"
-   - Choose amount and lock period
+   - Choose amount and lock period (1-365 days)
    - Confirm transaction
 
 ### For Developers
 
-#### Testing Contracts Locally
+#### Testing Contracts
 
 ```bash
-npx hardhat test
+cd soroban_contracts/sente_token
+cargo test
+
+cd ../sente_vault
+cargo test
 ```
 
-#### Deploying to Other Networks
-
-Edit `hardhat.config.js` and add your network configuration, then:
+#### Building Contracts
 
 ```bash
-npx hardhat run smart_contracts/deploy.js --network yourNetwork
+npm run build:soroban
+```
+
+#### Deploying to Stellar Mainnet
+
+Update `.env`:
+```env
+STELLAR_NETWORK=mainnet
+STELLAR_SECRET_KEY=S...
+```
+
+Then deploy:
+```bash
+npm run deploy:stellar
 ```
 
 #### Interacting with Contracts
 
-Use the Hardhat console:
+Use Soroban CLI:
 
 ```bash
 npx hardhat console --network baseSepolia

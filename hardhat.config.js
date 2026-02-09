@@ -1,6 +1,17 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
+/**
+ * NOTE: This project has been migrated to Stellar blockchain.
+ * This Hardhat configuration is kept for reference only.
+ * 
+ * To build and deploy:
+ * - Build Soroban contracts: npm run build:soroban
+ * - Deploy to Stellar: npm run deploy:stellar
+ * 
+ * See STELLAR_SETUP.md for detailed instructions.
+ */
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {

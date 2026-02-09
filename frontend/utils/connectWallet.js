@@ -1,63 +1,62 @@
-import { ethers } from 'ethers';
-import { BASE_SEPOLIA_CONFIG, switchToBaseSepolia as switchNetwork } from './networkConfig';
-import contractsData from '../config/contracts.json';
+import {
+  connectFreighter,
+  isFreighterInstalled,
+  getPublicKey,
+  getNetwork,
+  STELLAR_CONFIG,
+  fundTestnetAccount
+} from './stellarConfig';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
-let provider = null;
 let currentAccount = null;
+let currentNetwork = null;
 
-// Check if MetaMask is installed
-export const isMetaMaskInstalled = () => {
-  return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+// Check if Freighter is installed
+export const isWalletInstalled = () => {
+  return isFreighterInstalled();
 };
 
-// Hardhat Local Network Configuration
-export const HARDHAT_LOCAL_CONFIG = {
-  chainId: '0x539', // 1337 in hex
-  chainName: 'Hardhat Local',
-  nativeCurrency: {
-    name: 'Ethereum',
-    symbol: 'ETH',
-    decimals: 18,
-  },
-  rpcUrls: ['http://127.0.0.1:8545'],
-  blockExplorerUrls: [],
-};
-
-// Request account access
+// Connect wallet (Freighter for Stellar)
 export const connectWallet = async () => {
   try {
     console.log('connectWallet called');
 
-    if (!isMetaMaskInstalled()) {
-      console.error('MetaMask not detected');
-      throw new Error('MetaMask is not installed. Please install it to use this app.');
+    if (!isFreighterInstalled()) {
+      console.error('Freighter not detected');
+      throw new Error('Freighter wallet is not installed. Please install it from https://freighter.app');
     }
 
-    console.log('MetaMask detected, requesting accounts...');
+    console.log('Freighter detected, requesting access...');
 
-    // Request account access first
-    const accounts = await window.ethereum.request({
-      method: 'eth_requestAccounts',
-    });
+    // Request access to Freighter
+    const publicKey = await connectFreighter();
 
-    console.log('Accounts received:', accounts);
-
-    if (!accounts || accounts.length === 0) {
-      throw new Error('No accounts found');
+    if (!publicKey) {
+      throw new Error('Failed to connect to Freighter wallet');
     }
 
-    currentAccount = accounts[0];
+    currentAccount = publicKey;
     console.log('Account connected:', currentAccount);
 
-    // Auto-switch to the network where contracts are deployed
-    if (contractsData?.network === 'baseSepolia' || contractsData?.chainId === '84532') {
+    // Get current network
+    try {
+      currentNetwork = await getNetwork();
+      console.log('Current network:', currentNetwork);
+
+      if (currentNetwork !== STELLAR_CONFIG.network) {
+        console.warn(`Connected to ${currentNetwork}, but app expects ${STELLAR_CONFIG.network}`);
+      }
+    } catch (error) {
+      console.warn('Could not get current network:', error.message);
+    }
+
+    // Try to fund account on testnet if needed
+    if (STELLAR_CONFIG.network === 'testnet') {
       try {
-        console.log('Attempting to switch to Base Sepolia...');
-        await switchNetwork();
-        console.log('Switched to Base Sepolia network');
+        await fundTestnetAccount(publicKey);
+        console.log('Testnet account funded successfully');
       } catch (error) {
-        console.warn('Could not auto-switch to Base Sepolia:', error.message);
-        // Don't throw error, just log warning
+        console.log('Account might already be funded or friendbot failed:', error.message);
       }
     }
 
@@ -71,16 +70,14 @@ export const connectWallet = async () => {
 // Get current account
 export const getCurrentAccount = async () => {
   try {
-    if (!isMetaMaskInstalled()) {
+    if (!isFreighterInstalled()) {
       return null;
     }
 
-    const accounts = await window.ethereum.request({
-      method: 'eth_accounts',
-    });
+    const publicKey = await getPublicKey();
 
-    if (accounts && accounts.length > 0) {
-      currentAccount = accounts[0];
+    if (publicKey) {
+      currentAccount = publicKey;
       return currentAccount;
     }
 
@@ -91,109 +88,102 @@ export const getCurrentAccount = async () => {
   }
 };
 
-// Re-export network switching function
-export { switchToBaseSepolia, getBaseSepoliaNetworkDetails } from './networkConfig';
-
-// Switch to Hardhat Local network
-export const switchToHardhatLocal = async () => {
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: HARDHAT_LOCAL_CONFIG.chainId }],
-    });
-  } catch (switchError) {
-    // This error code indicates that the chain has not been added to MetaMask
-    if (switchError.code === 4902) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [HARDHAT_LOCAL_CONFIG],
-        });
-      } catch (addError) {
-        // If already pending, ignore and continue
-        if (addError.code === -32002) {
-          console.log('Network add request already pending, please check MetaMask');
-          return;
-        }
-        console.error('Error adding Hardhat local network:', addError);
-        throw addError;
-      }
-    } else if (switchError.code === -32002) {
-      // Already pending
-      console.log('Network switch request already pending, please check MetaMask');
-      return;
-    } else {
-      console.error('Error switching to Hardhat local:', switchError);
-      throw switchError;
-    }
-  }
-};
-
 // Get current network
 export const getCurrentNetwork = async () => {
   try {
-    if (!isMetaMaskInstalled()) {
+    if (!isFreighterInstalled()) {
       return null;
     }
 
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    return chainId;
+    const network = await getNetwork();
+    currentNetwork = network;
+    return network;
   } catch (error) {
     console.error('Error getting current network:', error);
     return null;
   }
 };
 
-// Listen for account changes
+// Listen for account changes (Freighter doesn't have this built-in, polling needed)
 export const onAccountsChanged = (callback) => {
-  if (!isMetaMaskInstalled()) {
+  if (!isFreighterInstalled()) {
     return;
   }
 
-  window.ethereum.on('accountsChanged', (accounts) => {
-    if (accounts.length === 0) {
-      currentAccount = null;
-      callback(null);
-    } else {
-      currentAccount = accounts[0];
-      callback(currentAccount);
+  // Poll for account changes every 2 seconds
+  setInterval(async () => {
+    try {
+      const publicKey = await getPublicKey();
+      if (publicKey !== currentAccount) {
+        currentAccount = publicKey;
+        callback(currentAccount);
+      }
+    } catch (error) {
+      // Wallet might be locked
+      if (currentAccount !== null) {
+        currentAccount = null;
+        callback(null);
+      }
     }
-  });
+  }, 2000);
 };
 
-// Listen for network changes
-export const onChainChanged = (callback) => {
-  if (!isMetaMaskInstalled()) {
+// Listen for network changes (Freighter doesn't have this built-in, polling needed)
+export const onNetworkChanged = (callback) => {
+  if (!isFreighterInstalled()) {
     return;
   }
 
-  window.ethereum.on('chainChanged', (chainId) => {
-    callback(chainId);
-  });
+  // Poll for network changes every 2 seconds
+  setInterval(async () => {
+    try {
+      const network = await getNetwork();
+      if (network !== currentNetwork) {
+        currentNetwork = network;
+        callback(network);
+      }
+    } catch (error) {
+      console.error('Error checking network:', error);
+    }
+  }, 2000);
 };
 
 // Disconnect wallet
 export const disconnectWallet = () => {
   currentAccount = null;
+  currentNetwork = null;
   return true;
 };
 
-// Format address for display
+// Format address for display (Stellar addresses are longer)
 export const formatAddress = (address) => {
   if (!address) return '';
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
 };
 
-// Get ETH balance
-export const getETHBalance = async (address) => {
+// Get XLM balance
+export const getXLMBalance = async (address) => {
   try {
-    if (!provider) {
-      provider = new ethers.BrowserProvider(window.ethereum);
-    }
-    const balance = await provider.getBalance(address);
-    return ethers.formatEther(balance);
+    const server = new StellarSdk.Horizon.Server(STELLAR_CONFIG.horizonUrl);
+    const account = await server.loadAccount(address);
+
+    const nativeBalance = account.balances.find(
+      (balance) => balance.asset_type === 'native'
+    );
+
+    return nativeBalance ? nativeBalance.balance : '0';
   } catch (error) {
-    console.error('Error getting ETH balance:', error);
+    console.error('Error getting XLM balance:', error);
     return '0';
   }
+};
+
+// Get Stellar network details
+export const getStellarNetworkDetails = () => {
+  return {
+    network: STELLAR_CONFIG.network,
+    horizonUrl: STELLAR_CONFIG.horizonUrl,
+    sorobanRpcUrl: STELLAR_CONFIG.sorobanRpcUrl,
+    networkPassphrase: STELLAR_CONFIG.networkPassphrase,
+  };
 };
