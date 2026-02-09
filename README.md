@@ -264,16 +264,41 @@ npm run deploy:stellar
 Use Soroban CLI:
 
 ```bash
-npx hardhat console --network baseSepolia
+# Get contract balance
+soroban contract invoke \
+  --id CONTRACT_ID \
+  --source deployer \
+  --network testnet \
+  -- balance \
+  --account YOUR_ADDRESS
+
+# Transfer tokens
+soroban contract invoke \
+  --id CONTRACT_ID \
+  --source deployer \
+  --network testnet \
+  -- transfer \
+  --from YOUR_ADDRESS \
+  --to RECIPIENT_ADDRESS \
+  --amount 100000000
 ```
 
-## 🌐 Base Sepolia Configuration
+## 🌐 Stellar Network Configuration
 
-- **Network Name**: Base Sepolia
-- **RPC URL**: https://sepolia.base.org
-- **Chain ID**: 84532 (0x14a34)
-- **Currency Symbol**: ETH
-- **Block Explorer**: https://sepolia.basescan.org
+### Testnet (Development)
+- **Network**: Test SDF Network ; September 2015
+- **Horizon URL**: https://horizon-testnet.stellar.org
+- **Soroban RPC**: https://soroban-testnet.stellar.org
+- **Friendbot**: https://friendbot.stellar.org
+- **Currency**: XLM (testnet)
+- **Explorer**: https://stellar.expert/explorer/testnet
+
+### Mainnet (Production)
+- **Network**: Public Global Stellar Network ; September 2015
+- **Horizon URL**: https://horizon.stellar.org
+- **Soroban RPC**: https://soroban-rpc.stellar.org
+- **Currency**: XLM
+- **Explorer**: https://stellar.expert/explorer/public
 
 ## 📱 Features
 
@@ -281,26 +306,30 @@ npx hardhat console --network baseSepolia
 
 - [x] Email/phone registration
 - [x] Auto-generated wallets
-- [x] MetaMask integration
-- [x] Token faucet (testnet)
+- [x] Freighter wallet integration
+- [x] Token faucet (100 sUSDT/day on testnet)
 - [x] Vault deposits/withdrawals
 - [x] Instant peer-to-peer transfers
-- [x] Savings vault with time locks
+- [x] Savings vault with time locks (1-365 days)
 - [x] Real-time balance updates
 - [x] Transaction notifications
 - [x] Mobile-responsive UI
-- [x] Base Sepolia integration
+- [x] Stellar testnet integration
+- [x] Soroban smart contracts (Rust)
+- [x] Auto-funded testnet accounts
 
 ### 🚧 Future Enhancements
 
-- [ ] Account abstraction (Privy/Web3Auth)
+- [ ] Account abstraction integration
 - [ ] QR code payments
-- [ ] Transaction history
+- [ ] Transaction history from Horizon API
 - [ ] Contact management
 - [ ] Telegram mini-app integration
 - [ ] Push notifications
-- [ ] Multi-currency support
-- [ ] Mainnet deployment
+- [ ] Multi-asset support (other Stellar tokens)
+- [ ] Stellar mainnet deployment
+- [ ] Integration with Stellar anchors for real USD
+- [ ] Cross-border remittance features
 
 ## 🎨 UI Preview
 
@@ -312,19 +341,34 @@ npx hardhat console --network baseSepolia
 ### Dashboard
 - Wallet balance card
 - Send money form
-- Savings vault interface
-- Quick action buttons
-- Transaction status
-
 ## 🔐 Security
 
-- Smart contracts use OpenZeppelin libraries
+- Smart contracts written in Rust with Soroban SDK (memory-safe)
+- Explicit authorization checks on all functions (`require_auth()`)
+- Admin-only functions for minting and initialization
+- Input validation on frontend and backend
+- Secure JWT authentication for user sessions
+- Time-locked savings with ledger-based unlocking
+- No reentrancy vulnerabilities (Rust ownership model)
+- Contract addresses validated before invocationeppelin libraries
 - ReentrancyGuard on all state-changing functions
 - Ownable pattern for admin functions
-- Input validation on frontend and backend
-- Secure JWT authentication
-
 ## 🧪 Testing
+
+### Rust Contract Tests
+
+```bash
+# Test token contract
+cd soroban_contracts/sente_token
+cargo test
+
+# Test vault contract
+cd soroban_contracts/sente_vault
+cargo test
+
+# Test with output
+cargo test -- --nocapture
+```
 
 ### Manual Testing Flow
 
@@ -332,22 +376,42 @@ npx hardhat console --network baseSepolia
    - Test with email: `test@example.com`
    - Test with phone: `+256700000000`
 
-2. **Get Testnet Tokens**
-   - Use faucet to get 100 sUSDT
-   - Check wallet balance updates
-
-3. **Transfer Flow**
-   - Create second account
-   - Transfer between accounts
-   - Verify balances
-
-4. **Savings Flow**
-   - Lock 50 sUSDT for 7 days
-   - Try to withdraw (should fail)
-   - Check unlock date
-   - Wait or modify timestamp in testing
-
 ## 📦 Deployment
+
+### Prerequisites for Deployment
+
+1. **Install Rust & Soroban CLI**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
+cargo install --locked soroban-cli
+```
+
+2. **Generate Stellar Keypair**
+```bash
+soroban keys generate deployer --network testnet
+soroban keys address deployer  # Get your public key
+```
+
+3. **Fund Account (Testnet)**
+```bash
+curl "https://friendbot.stellar.org/?addr=$(soroban keys address deployer)"
+```
+
+### Smart Contracts to Stellar
+
+```bash
+# Build contracts
+npm run build:soroban
+
+# Deploy to testnet
+STELLAR_NETWORK=testnet npm run deploy:stellar
+
+# Deploy to mainnet (when ready)
+STELLAR_NETWORK=mainnet npm run deploy:stellar
+```
+
+After deployment, contract addresses are saved to `frontend/config/contracts.json`.
 
 ### Frontend (Vercel)
 
@@ -357,17 +421,19 @@ npm run build
 vercel --prod
 ```
 
+Set environment variables in Vercel:
+- `NEXT_PUBLIC_API_URL`: Your backend API URL
+
 ### Backend (Heroku/Railway)
 
 ```bash
 cd backend
-# Set environment variables
+# Set environment variables:
+# - DB_CONNECTION_STRING
+# - JWT_SECRET
+# - PORT
 # Deploy using your platform's CLI
 ```
-
-### Smart Contracts
-
-Already deployed to Base Sepolia! Check `frontend/config/contracts.json` for addresses.
 
 ## 🤝 Contributing
 
@@ -389,51 +455,94 @@ Built with ❤️ by the SenteChain Team
 
 ## 🙏 Acknowledgments
 
-- [Base](https://base.org) - For the amazing L2 infrastructure
-- [OpenZeppelin](https://openzeppelin.com) - For secure smart contract libraries
-- [Hardhat](https://hardhat.org) - For the development environment
-- [Next.js](https://nextjs.org) - For the React framework
+- **Documentation**: This README + `STELLAR_SETUP.md`
+- **Quick Reference**: `QUICK_REFERENCE.md`
+- **Migration Guide**: `MIGRATION_GUIDE.md`
+- **Issues**: [GitHub Issues](https://github.com/ofwonogodwin/SenteChain-MiniApp/issues)
+- **Stellar Discord**: https://discord.gg/stellar
 
-## 📞 Support
+## 🛠️ Troubleshooting
 
-- **Documentation**: This README
-- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-- **Discord**: Join our community server
+### Build Issues
+```bash
+# Clean and rebuild
+rm -rf soroban_build/
+npm run build:soroban
+```
 
-## 🎯 Hackathon Demo
+### Deployment Issues
+```bash
+# Check account balance
+curl "https://horizon-testnet.stellar.org/accounts/$(soroban keys address deployer)"
+
+# Refund account
+curl "https://friendbot.stellar.org/?addr=$(soroban keys address deployer)"
+```
+
+### Frontend Issues
+```bash
+# Reinstall dependencies
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## 🎯 Demo Guide
 
 ### Quick Demo Script
 
 1. **Show Landing Page** (30 seconds)
-   - Explain walletless onboarding
-   - Register with email
+   - Explain walletless onboarding for African users
+   - Register with email or phone
 
-2. **Connect MetaMask** (30 seconds)
-   - Show Base Sepolia connection
+2. **Connect Freighter Wallet** (30 seconds)
+   - Show Stellar Testnet connection
    - Display auto-generated wallet
+   - Account automatically funded via Friendbot
 
 3. **Get Test Tokens** (1 minute)
-   - Use faucet feature
-   - Show transaction on explorer
+   - Click "Claim 100 sUSDT" faucet button
+   - Show transaction confirmation in Freighter
+   - Display updated balance (5-10 seconds)
 
 4. **Transfer Money** (1 minute)
-   - Send to another address
-   - Show instant confirmation
+   - Enter recipient Stellar address (G...)
+   - Send tokens instantly
+   - Show confirmation on Stellar Expert
 
-5. **Lock Savings** (1 minute)
-   - Demonstrate savings vault
-   - Show unlock mechanism
+5. **Savings Feature** (1 minute)
+   - Lock tokens in savings vault
+   - Choose lock duration (1-365 days)
+   - Show unlocked balance vs locked balance
 
-### Key Talking Points
+## 🔗 Useful Links
 
-- ✨ **No Crypto Knowledge Required**: Users just need email/phone
-- ⚡ **Instant Transfers**: Zero-fee transfers within SenteChain
-- 🔒 **Savings Feature**: Encourage financial discipline
-- 🌍 **Built on Base**: Leveraging Coinbase's L2 for scalability
-- 📱 **Mobile-First**: Designed for African mobile users
+- **Stellar Documentation**: https://developers.stellar.org/
+- **Soroban Docs**: https://soroban.stellar.org/docs
+- **Stellar Expert**: https://stellar.expert/explorer/testnet
+- **Stellar Laboratory**: https://laboratory.stellar.org/
+- **Freighter Wallet**: https://freighter.app/
+- **Rust Book**: https://doc.rust-lang.org/book/
+
+## 📊 Performance Metrics
+
+| Metric | Stellar | Base (Previous) |
+|--------|---------|-----------------|
+| Transaction Time | ~5 seconds | ~2 seconds |
+| Transaction Finality | ~5 seconds | ~12 seconds |
+| Average Fee | ~$0.0001 | ~$0.01-0.10 |
+| Smart Contract Language | Rust | Solidity |
+| Wallet | Freighter | MetaMask |
+
+## 🌍 Why Stellar for Africa?
+
+- **Low Fees**: ~$0.0001 per transaction vs $0.01-0.10 on other chains
+- **Fast Finality**: 5 seconds vs 12+ seconds
+- **Built for Payments**: Stellar designed for cross-border transfers
+- **Anchor Network**: Easy fiat on/off ramps in Africa
+- **Mobile First**: Optimized for mobile devices
+- **Growing Adoption**: Multiple African fintech companies use Stellar
 
 ---
 
-**Made with 💚 for Ugandans by Ugandans**
-
-🚀 Ready to revolutionize remittances in Africa!
+**Built with ❤️ for financial inclusion in Africa** 🌍
