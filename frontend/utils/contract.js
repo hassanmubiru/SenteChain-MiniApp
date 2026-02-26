@@ -458,10 +458,10 @@ export const formatTxHash = (hash) => {
   return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
 };
 
-// Get Base Sepolia explorer link
+// Get Celo explorer link
 export const getExplorerLink = (txHash) => {
-  return `${BASE_SEPOLIA_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`;
+  return `${CELO_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`;
 };
 
 // Re-export network utilities from networkConfig
-export { switchToBaseSepolia, isBaseSepolia } from './networkConfig';
+export { switchToCelo, isCelo, switchToBaseSepolia, isBaseSepolia } from './networkConfig';
