@@ -1,63 +1,55 @@
-import {
-  connectFreighter,
-  isFreighterInstalled,
-  getPublicKey,
-  getNetwork,
-  STELLAR_CONFIG,
-  fundTestnetAccount
-} from './stellarConfig';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import { ethers } from 'ethers';
+import { CELO_CONFIG, switchToCelo, isCelo, getCeloNetworkDetails } from './networkConfig';
 
 let currentAccount = null;
 let currentNetwork = null;
 
-// Check if Freighter is installed
+// Check if MetaMask is installed
 export const isWalletInstalled = () => {
-  return isFreighterInstalled();
+  if (typeof window === 'undefined') return false;
+  return typeof window.ethereum !== 'undefined';
 };
 
-// Connect wallet (Freighter for Stellar)
+// Connect wallet (MetaMask for Celo)
 export const connectWallet = async () => {
   try {
     console.log('connectWallet called');
 
-    if (!isFreighterInstalled()) {
-      console.error('Freighter not detected');
-      throw new Error('Freighter wallet is not installed. Please install it from https://freighter.app');
+    if (!isWalletInstalled()) {
+      console.error('MetaMask not detected');
+      throw new Error('MetaMask wallet is not installed. Please install it from https://metamask.io');
     }
 
-    console.log('Freighter detected, requesting access...');
+    console.log('MetaMask detected, requesting access...');
 
-    // Request access to Freighter
-    const publicKey = await connectFreighter();
+    // Request account access
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-    if (!publicKey) {
-      throw new Error('Failed to connect to Freighter wallet');
+    if (!accounts || accounts.length === 0) {
+      throw new Error('Failed to connect to MetaMask wallet');
     }
 
-    currentAccount = publicKey;
+    currentAccount = accounts[0];
     console.log('Account connected:', currentAccount);
 
     // Get current network
     try {
-      currentNetwork = await getNetwork();
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      currentNetwork = chainId;
       console.log('Current network:', currentNetwork);
 
-      if (currentNetwork !== STELLAR_CONFIG.network) {
-        console.warn(`Connected to ${currentNetwork}, but app expects ${STELLAR_CONFIG.network}`);
+      if (chainId !== CELO_CONFIG.chainId) {
+        console.warn(`Connected to ${chainId}, but app expects Celo (${CELO_CONFIG.chainId})`);
+        // Try to switch to Celo
+        try {
+          await switchToCelo();
+          console.log('Switched to Celo network');
+        } catch (switchError) {
+          console.log('Could not auto-switch to Celo:', switchError.message);
+        }
       }
     } catch (error) {
       console.warn('Could not get current network:', error.message);
-    }
-
-    // Try to fund account on testnet if needed
-    if (STELLAR_CONFIG.network === 'testnet') {
-      try {
-        await fundTestnetAccount(publicKey);
-        console.log('Testnet account funded successfully');
-      } catch (error) {
-        console.log('Account might already be funded or friendbot failed:', error.message);
-      }
     }
 
     return currentAccount;
@@ -70,14 +62,14 @@ export const connectWallet = async () => {
 // Get current account
 export const getCurrentAccount = async () => {
   try {
-    if (!isFreighterInstalled()) {
+    if (!isWalletInstalled()) {
       return null;
     }
 
-    const publicKey = await getPublicKey();
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
 
-    if (publicKey) {
-      currentAccount = publicKey;
+    if (accounts && accounts.length > 0) {
+      currentAccount = accounts[0];
       return currentAccount;
     }
 
@@ -91,61 +83,41 @@ export const getCurrentAccount = async () => {
 // Get current network
 export const getCurrentNetwork = async () => {
   try {
-    if (!isFreighterInstalled()) {
+    if (!isWalletInstalled()) {
       return null;
     }
 
-    const network = await getNetwork();
-    currentNetwork = network;
-    return network;
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    currentNetwork = chainId;
+    return chainId;
   } catch (error) {
     console.error('Error getting current network:', error);
     return null;
   }
 };
 
-// Listen for account changes (Freighter doesn't have this built-in, polling needed)
+// Listen for account changes
 export const onAccountsChanged = (callback) => {
-  if (!isFreighterInstalled()) {
+  if (!isWalletInstalled()) {
     return;
   }
 
-  // Poll for account changes every 2 seconds
-  setInterval(async () => {
-    try {
-      const publicKey = await getPublicKey();
-      if (publicKey !== currentAccount) {
-        currentAccount = publicKey;
-        callback(currentAccount);
-      }
-    } catch (error) {
-      // Wallet might be locked
-      if (currentAccount !== null) {
-        currentAccount = null;
-        callback(null);
-      }
-    }
-  }, 2000);
+  window.ethereum.on('accountsChanged', (accounts) => {
+    currentAccount = accounts.length > 0 ? accounts[0] : null;
+    callback(currentAccount);
+  });
 };
 
-// Listen for network changes (Freighter doesn't have this built-in, polling needed)
+// Listen for network changes
 export const onNetworkChanged = (callback) => {
-  if (!isFreighterInstalled()) {
+  if (!isWalletInstalled()) {
     return;
   }
 
-  // Poll for network changes every 2 seconds
-  setInterval(async () => {
-    try {
-      const network = await getNetwork();
-      if (network !== currentNetwork) {
-        currentNetwork = network;
-        callback(network);
-      }
-    } catch (error) {
-      console.error('Error checking network:', error);
-    }
-  }, 2000);
+  window.ethereum.on('chainChanged', (chainId) => {
+    currentNetwork = chainId;
+    callback(chainId);
+  });
 };
 
 // Disconnect wallet
@@ -155,35 +127,29 @@ export const disconnectWallet = () => {
   return true;
 };
 
-// Format address for display (Stellar addresses are longer)
+// Format address for display
 export const formatAddress = (address) => {
   if (!address) return '';
-  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
-// Get XLM balance
-export const getXLMBalance = async (address) => {
+// Get CELO balance
+export const getCeloBalance = async (address) => {
   try {
-    const server = new StellarSdk.Horizon.Server(STELLAR_CONFIG.horizonUrl);
-    const account = await server.loadAccount(address);
-
-    const nativeBalance = account.balances.find(
-      (balance) => balance.asset_type === 'native'
-    );
-
-    return nativeBalance ? nativeBalance.balance : '0';
+    const provider = new ethers.JsonRpcProvider(CELO_CONFIG.rpcUrls[0]);
+    const balance = await provider.getBalance(address);
+    return ethers.formatEther(balance);
   } catch (error) {
-    console.error('Error getting XLM balance:', error);
+    console.error('Error getting CELO balance:', error);
     return '0';
   }
 };
 
-// Get Stellar network details
-export const getStellarNetworkDetails = () => {
-  return {
-    network: STELLAR_CONFIG.network,
-    horizonUrl: STELLAR_CONFIG.horizonUrl,
-    sorobanRpcUrl: STELLAR_CONFIG.sorobanRpcUrl,
-    networkPassphrase: STELLAR_CONFIG.networkPassphrase,
-  };
+// Get Celo network details
+export const getCeloNetworkInfo = () => {
+  return getCeloNetworkDetails();
 };
+
+// Legacy aliases for backwards compatibility
+export const getXLMBalance = getCeloBalance;
+export const getStellarNetworkDetails = getCeloNetworkInfo;

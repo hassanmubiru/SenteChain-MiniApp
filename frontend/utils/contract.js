@@ -3,7 +3,7 @@ import contractsData from '../config/contracts.json';
 import SenteTokenABI from '../config/SenteTokenABI.json';
 import SenteVaultABI from '../config/SenteVaultABI.json';
 
-import { BASE_SEPOLIA_CONFIG, switchToBaseSepolia, isBaseSepolia } from './networkConfig';
+import { CELO_CONFIG, switchToCelo, isCelo } from './networkConfig';
 
 let provider = null;
 let signer = null;
@@ -36,12 +36,12 @@ export const initProvider = () => {
       provider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
       console.log('Using Hardhat local provider');
     } else {
-      provider = new ethers.JsonRpcProvider(BASE_SEPOLIA_CONFIG.rpcUrls[0]);
-      console.log('Using Base Sepolia provider');
+      provider = new ethers.JsonRpcProvider(CELO_CONFIG.rpcUrls[0]);
+      console.log('Using Celo provider');
     }
   } catch (error) {
     console.error('Error initializing provider:', error);
-    provider = new ethers.JsonRpcProvider(BASE_SEPOLIA_CONFIG.rpcUrls[0]);
+    provider = new ethers.JsonRpcProvider(CELO_CONFIG.rpcUrls[0]);
   }
 
   return provider;

@@ -1,18 +1,34 @@
-// Base Sepolia testnet configuration
-export const BASE_SEPOLIA_CONFIG = {
-  chainId: '0x14A34', // 84532
-  chainName: 'Base Sepolia',
+// Celo Alfajores Testnet configuration
+export const CELO_ALFAJORES_CONFIG = {
+  chainId: '0xAEF3', // 44787
+  chainName: 'Celo Alfajores Testnet',
   nativeCurrency: {
-    name: 'ETH',
-    symbol: 'ETH',
+    name: 'CELO',
+    symbol: 'CELO',
     decimals: 18,
   },
-  rpcUrls: ['https://sepolia.base.org'],
-  blockExplorerUrls: ['https://sepolia.basescan.org'],
+  rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
+  blockExplorerUrls: ['https://alfajores.celoscan.io'],
 };
 
-// Function to switch to Base Sepolia network
-export const switchToBaseSepolia = async () => {
+// Celo Mainnet configuration
+export const CELO_MAINNET_CONFIG = {
+  chainId: '0xA4EC', // 42220
+  chainName: 'Celo Mainnet',
+  nativeCurrency: {
+    name: 'CELO',
+    symbol: 'CELO',
+    decimals: 18,
+  },
+  rpcUrls: ['https://forno.celo.org'],
+  blockExplorerUrls: ['https://celoscan.io'],
+};
+
+// Default to Alfajores testnet for development
+export const CELO_CONFIG = CELO_ALFAJORES_CONFIG;
+
+// Function to switch to Celo network
+export const switchToCelo = async () => {
   try {
     if (!window.ethereum) {
       throw new Error('MetaMask is not installed');
@@ -22,7 +38,7 @@ export const switchToBaseSepolia = async () => {
       // Try to switch to the network first
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: BASE_SEPOLIA_CONFIG.chainId }],
+        params: [{ chainId: CELO_CONFIG.chainId }],
       });
       return true;
     } catch (switchError) {
@@ -31,7 +47,7 @@ export const switchToBaseSepolia = async () => {
         // Chain not added, let's add it
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
-          params: [BASE_SEPOLIA_CONFIG],
+          params: [CELO_CONFIG],
         });
         return true;
       } else if (switchError.code === 4001) {
@@ -56,15 +72,15 @@ export const switchToBaseSepolia = async () => {
   }
 };
 
-// Function to check if currently on Base Sepolia
-export const isBaseSepolia = async () => {
+// Function to check if currently on Celo network
+export const isCelo = async () => {
   try {
     if (!window.ethereum) {
       throw new Error('MetaMask is not installed');
     }
 
     const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    return chainId === BASE_SEPOLIA_CONFIG.chainId;
+    return chainId === CELO_CONFIG.chainId;
   } catch (error) {
     console.error('Error checking network:', error);
     return false;
@@ -72,13 +88,19 @@ export const isBaseSepolia = async () => {
 };
 
 // Get network configuration details for manual setup
-export const getBaseSepoliaNetworkDetails = () => {
+export const getCeloNetworkDetails = () => {
   return {
-    networkName: BASE_SEPOLIA_CONFIG.chainName,
-    rpcUrl: BASE_SEPOLIA_CONFIG.rpcUrls[0],
-    chainId: parseInt(BASE_SEPOLIA_CONFIG.chainId, 16), // Convert hex to decimal
-    chainIdHex: BASE_SEPOLIA_CONFIG.chainId,
-    currencySymbol: BASE_SEPOLIA_CONFIG.nativeCurrency.symbol,
-    blockExplorer: BASE_SEPOLIA_CONFIG.blockExplorerUrls[0],
+    networkName: CELO_CONFIG.chainName,
+    rpcUrl: CELO_CONFIG.rpcUrls[0],
+    chainId: parseInt(CELO_CONFIG.chainId, 16), // Convert hex to decimal
+    chainIdHex: CELO_CONFIG.chainId,
+    currencySymbol: CELO_CONFIG.nativeCurrency.symbol,
+    blockExplorer: CELO_CONFIG.blockExplorerUrls[0],
   };
 };
+
+// Legacy aliases for backwards compatibility
+export const BASE_SEPOLIA_CONFIG = CELO_ALFAJORES_CONFIG;
+export const switchToBaseSepolia = switchToCelo;
+export const isBaseSepolia = isCelo;
+export const getBaseSepoliaNetworkDetails = getCeloNetworkDetails;

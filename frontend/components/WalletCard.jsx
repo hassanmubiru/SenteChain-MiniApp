@@ -5,7 +5,7 @@ import {
   getUnlockTime,
   claimFaucet,
   canClaimFaucet,
-  switchToBaseSepolia
+  switchToCelo
 } from '../utils/contract';
 import toast from 'react-hot-toast';
 
@@ -55,9 +55,9 @@ export default function WalletCard({ userAddress, onBalanceUpdate }) {
 
       // Check if connected to correct network
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== '0x14A34') { // Base Sepolia
+      if (chainId !== '0xAEF3') { // Celo Alfajores
         // Don't auto-switch, just log it
-        console.log('Not on Base Sepolia network. Current chain:', chainId);
+        console.log('Not on Celo Alfajores network. Current chain:', chainId);
         // User can switch manually from settings
         return;
       }

@@ -2,14 +2,15 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
 /**
- * NOTE: This project has been migrated to Stellar blockchain.
- * This Hardhat configuration is kept for reference only.
+ * SenteChain - Celo Blockchain Configuration
+ * 
+ * This project uses Celo blockchain for smart contract deployment.
  * 
  * To build and deploy:
- * - Build Soroban contracts: npm run build:soroban
- * - Deploy to Stellar: npm run deploy:stellar
+ * - Deploy to Celo Alfajores: npx hardhat run smart_contracts/deploy.js --network celoAlfajores
+ * - Deploy to Celo Mainnet: npx hardhat run smart_contracts/deploy.js --network celoMainnet
  * 
- * See STELLAR_SETUP.md for detailed instructions.
+ * See README.md for detailed instructions.
  */
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -27,10 +28,15 @@ module.exports = {
     hardhat: {
       chainId: 1337
     },
-    baseSepolia: {
-      url: process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
+    celoAlfajores: {
+      url: process.env.CELO_ALFAJORES_RPC || "https://alfajores-forno.celo-testnet.org",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
-      chainId: 84532
+      chainId: 44787
+    },
+    celoMainnet: {
+      url: process.env.CELO_MAINNET_RPC || "https://forno.celo.org",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 42220
     }
   },
   paths: {
