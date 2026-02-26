@@ -1,24 +1,25 @@
 {
   "name": "sentechain-miniapp",
   "version": "1.0.0",
-  "description": "Web3 Mini-App for sending, receiving, and saving USDT on Stellar",
+  "description": "Web3 Mini-App for sending, receiving, and saving USDT on Celo",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "build:frontend": "cd frontend && npm run build",
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "build:soroban": "node stellar_deploy/build-contracts.js",
-    "deploy:stellar": "node stellar_deploy/deploy.js",
-    "deploy": "node stellar_deploy/deploy.js",
+    "deploy:celo": "npx hardhat run smart_contracts/deploy.js --network celoAlfajores",
+    "deploy:celo:mainnet": "npx hardhat run smart_contracts/deploy.js --network celoMainnet",
+    "deploy": "npx hardhat run smart_contracts/deploy.js --network celoAlfajores",
+    "compile": "npx hardhat compile",
     "test": "npx hardhat test"
   },
   "keywords": [
     "web3",
-    "stellar",
-    "soroban",
+    "celo",
     "stablecoin",
-    "defi"
+    "defi",
+    "africa"
   ],
   "author": "SenteChain Team",
   "license": "MIT",
@@ -29,8 +30,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.1",
-    "@stellar/stellar-sdk": "^14.5.0",
     "dotenv": "^16.3.1",
-    "stellar-base": "^13.1.0"
+    "ethers": "^6.9.0"
   }
 }
